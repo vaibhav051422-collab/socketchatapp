@@ -1,47 +1,164 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Socket.IO chat</title>
+    <title>WhatsApp Web Clone</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-      body { margin: 0; padding-bottom: 3rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+      :root {
+        --wa-teal: #008069;
+        --wa-bg-color: #e5ddd5;
+        --wa-sent: #dcf8c6;
+        --wa-received: #ffffff;
+        --wa-input-bg: #f0f2f5;
+        --text-dark: #111b21;
+        --name-color: #54656f;
+      }
 
-      #form { background: rgba(0, 0, 0, 0.15); padding: 0.25rem; position: fixed; bottom: 0; left: 0; right: 0; display: flex; height: 3rem; box-sizing: border-box; backdrop-filter: blur(10px); }
-      #input { border: none; padding: 0 1rem; flex-grow: 1; border-radius: 2rem; margin: 0.25rem; }
-      #input:focus { outline: none; }
-      #form > button { background: #333; border: none; padding: 0 1rem; margin: 0.25rem; border-radius: 3px; outline: none; color: #fff; }
+      body { 
+        margin: 0; padding: 0;
+        font-family: 'Segoe UI', Helvetica, Arial, sans-serif; 
+        background: #dadbd3;
+        display: flex; justify-content: center; align-items: center; height: 100vh;
+      }
 
-      #messages { list-style-type: none; margin: 0; padding: 0; }
-      #messages > li { padding: 0.5rem 1rem; }
-      #messages > li:nth-child(odd) { background: #efefef; }
+      
+      #login-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: var(--wa-teal);
+        display: flex; justify-content: center; align-items: center;
+        z-index: 100;
+      }
+      .login-box {
+        background: white; padding: 2rem; border-radius: 10px; text-align: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      }
+      .login-box input {
+        padding: 10px; width: 200px; border: 1px solid #ccc; border-radius: 5px; margin-bottom: 10px;
+      }
+      .login-box button {
+        padding: 10px 20px; background: var(--wa-teal); color: white; border: none; border-radius: 5px; cursor: pointer;
+      }
+
+      #chat-wrapper {
+        width: 100%; max-width: 900px; height: 95vh;
+        background-color: var(--wa-bg-color);
+        background-image: linear-gradient(rgba(229, 221, 213, 0.94), rgba(229, 221, 213, 0.94)), 
+                          url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+        display: none;
+        flex-direction: column; box-shadow: 0 17px 50px 0 rgba(0,0,0,.19);
+      }
+
+      header {
+        background: var(--wa-teal); color: white; padding: 10px 16px;
+        display: flex; align-items: center; gap: 15px;
+      }
+
+      .avatar { width: 40px; height: 40px; background: #eee; border-radius: 50%; }
+
+      #messages { 
+        list-style-type: none; margin: 0; padding: 20px 5%; 
+        flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column;
+      }
+
+      #messages > li { 
+        padding: 6px 12px 8px 12px; margin-bottom: 8px; max-width: 70%;
+        font-size: 14.5px; line-height: 20px; position: relative;
+        box-shadow: 0 1px 1px rgba(0,0,0,0.15);
+      }
+
+    
+      .username {
+        display: block; font-weight: bold; font-size: 12px; 
+        margin-bottom: 2px; color: #e91e63; 
+      }
+
+      #messages > li:nth-child(odd) { 
+        background: var(--wa-received); border-radius: 0 8px 8px 8px; align-self: flex-start;
+      }
+
+      #messages > li:nth-child(even) { 
+        background: var(--wa-sent); border-radius: 8px 0 8px 8px; align-self: flex-end;
+      }
+
+      #form { background: var(--wa-input-bg); padding: 10px 16px; display: flex; gap: 12px; }
+
+      #input { 
+        border: none; padding: 10px 15px; flex-grow: 1; border-radius: 8px; 
+        background: white; outline: none;
+      }
+
+      button#send-btn { 
+        background: none; border: none; color: var(--wa-teal); font-weight: 700; cursor: pointer;
+      }
     </style>
   </head>
   <body>
-    <ul id="messages"></ul>
-    <form id="form" action="">
-      <input id="input" autocomplete="off" /><button>Send</button>
-      <script src="/socket.io/socket.io.js"></script>
-<script>
-  var socket = io();
 
-  var messages = document.getElementById('messages');
-  var form = document.getElementById('form');
-  var input = document.getElementById('input');
+    <div id="login-overlay">
+      <div class="login-box">
+        <h3>Welcome to Chat</h3>
+        <input id="name-input" placeholder="Enter your nameeee" autocomplete="off" />
+        <br>
+        <button id="join-btn">Join Chat</button>
+      </div>
+    </div>
 
-  form.addEventListener('submit', function(e) {
-    e.preventDefault();
-    if (input.value) {
-      socket.emit('chat message', input.value);
-      input.value = '';
-    }
-  });
+    <div id="chat-wrapper">
+      <header>
+        <div class="avatar" style="background: #dfe5e7 url('https://cdn-icons-png.flaticon.com/512/149/149071.png') center/cover;"></div>
+        <div><h2 id="display-name">Group Chat</h2><small>online</small></div>
+      </header>
+      
+      <ul id="messages"></ul>
 
-  socket.on('chat message', function(msg) {
-    var item = document.createElement('li');
-    item.textContent = msg;
-    messages.appendChild(item);
-    window.scrollTo(0, document.body.scrollHeight);
-  });
-</script>
-    </form>
+      <form id="form" action="">
+        <input id="input" autocomplete="off" placeholder="Type a message" />
+        <button id="send-btn">SEND</button>
+      </form>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      var socket = io();
+      var userName = "";
+
+      
+      document.getElementById('join-btn').addEventListener('click', function() {
+        var nameField = document.getElementById('name-input');
+        if (nameField.value) {
+          userName = nameField.value;
+          document.getElementById('login-overlay').style.display = 'none';
+          document.getElementById('chat-wrapper').style.display = 'flex';
+        }
+      });
+
+      var messages = document.getElementById('messages');
+      var form = document.getElementById('form');
+      var input = document.getElementById('input');
+
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (input.value) {
+        
+          socket.emit('chat message', userName + ": " + input.value);
+          input.value = '';
+        }
+      });
+
+      socket.on('chat message', function(msg) {
+        var item = document.createElement('li');
+        
+        
+        var parts = msg.split(': ');
+        if (parts.length > 1) {
+            item.innerHTML = `<span class="username">${parts[0]}</span>${parts.slice(1).join(': ')}`;
+        } else {
+            item.textContent = msg;
+        }
+
+        messages.appendChild(item);
+        messages.scrollTop = messages.scrollHeight;
+      });
+    </script>
   </body>
 </html>
